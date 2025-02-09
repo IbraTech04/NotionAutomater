@@ -60,7 +60,7 @@ def generate_posting_schedule(webhook_url: str):
 # === Example Usage ===
 if __name__ == "__main__":
     # Replace this URL with your actual Slack incoming webhook URL
-    webhook_url = "https://hooks.slack.com/services/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"
+    webhook_url = os.getenv("SLACK_WEBHOOK_URL")
     
     try:
         generate_posting_schedule(webhook_url)
