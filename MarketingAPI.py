@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from functools import total_ordering
 
@@ -86,14 +86,14 @@ class MarketingRequest:
                 if date_str:
                     post_date = datetime.fromisoformat(date_str)
                 else:
-                    post_date = datetime(2024, 9, 1)
+                    post_date = None
             except Exception as e:
                 # In case of an unexpected structure or format, we leave post_date as None.
                 # Set teh post date to september 1st 2024
                 print(e)
-                post_date = datetime(2024, 9, 1)
+                post_date = None
         else:
-            post_date = datetime(2024, 9, 1)
+            post_date = None
                 
 
         return cls(
@@ -132,7 +132,41 @@ class MarketingRequest:
         if not isinstance(other, MarketingRequest):
             return NotImplemented
         return self._sort_key() < other._sort_key()
+    
+    def get_notion_link(self):
+        """
+        Notion Link Format: https://www.notion.so/utmmsa2023-24/<name>-<id>
+        """
+        x = self.title.replace(' ', '-')
+        y = self.id.replace("-", "")
+        return f"https://www.notion.so/utmmsa2023-24/{x}-{y}"
 
+    def calculate_days_until_posting(self) -> Optional[int]:
+        """
+        Calculate the number of days until the post date.
+        Returns None if the post date is not set.
+        """
+        if self.post_date is None:
+            return None
+        return (self.post_date - datetime.now()).days
+
+    def to_markdown(self) -> str:
+        """Generates a markdown-formatted Slack message for a single request."""
+
+        return f"- *{self.title}*\n" \
+                f"\t - ✅ Content Type: {self.content_type}\n" \
+               f"\t - 🔗 Notion: <{self.get_notion_link()}>\n" \
+               f"\t - 📅 Posting Date: {self.post_date.strftime('%B %d') if self.post_date else 'TBD'}\n" \
+               f"\t - ⌛ Days Until Posting: {self.calculate_days_until_posting() if self.post_date else 'TBD'}\n" \
+
+    def is_this_week(self):
+        """
+        Returns whether this post is to be posted on or before this week
+        Precondition: This post is confirmed
+        """
+        if self.status != "Confirmed":
+            return False
+        return self.post_date <= datetime.now() + timedelta(days=7)
 
 class MarketingRequestCollection:
     """
@@ -176,6 +210,27 @@ class MarketingRequestCollection:
         """
         return self._fetch(content_type, lambda req: req.content_type)
 
+    def filter_by_criterion(self, *criteria: callable[[MarketingRequest], bool]) -> List[MarketingRequest]:
+        """
+        Return a list of MarketingRequest objects that satisfy all provided filter criteria.
+        
+        Each criterion is a callable that takes a MarketingRequest and returns a boolean.
+        For example, you might want to filter by:
+          - status ("Completed"),
+          - content_type ("Reel"), and
+          - a post_date within this week.
+        
+        Usage:
+            filtered = collection.filter_requests(
+                lambda req: req.status == "Completed",
+                lambda req: req.content_type == "Reel",
+                lambda req: is_this_week(req.post_date)
+            )
+        """
+        return [req for req in self.requests if all(criterion(req) for criterion in criteria)]
+
+
+
     def __iter__(self):
         return iter(self.requests)
 
@@ -187,9 +242,6 @@ class MarketingRequestCollection:
 
     def __repr__(self):
         return f"<MarketingRequestCollection with {len(self.requests)} requests>"
-    
-    # define sort magic method
-
 
 
 # Example usage:
