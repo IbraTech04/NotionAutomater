@@ -166,7 +166,7 @@ class MarketingRequest:
         """
         if self.status != "Confirmed":
             return False
-        return self.post_date <= datetime.now() + timedelta(days=7)
+        return self.post_date <= datetime.now()
 
 class MarketingRequestCollection:
     """

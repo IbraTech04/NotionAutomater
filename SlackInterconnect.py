@@ -1,6 +1,5 @@
 import requests
 from NotionAPI import NotionMarketingAPI
-from MarketingAPI import MarketingRequestCollection, MarketingRequest
 import os
 import dotenv
 dotenv.load_dotenv("tokens.env")
@@ -56,14 +55,11 @@ def generate_posting_schedule(webhook_url: str):
     
     send_slack_webhook_message(webhook_url, msg, username="Marketing Bot", icon_emoji=":chart_with_upwards_trend:", markdown=True)
 
-
-# === Example Usage ===
 if __name__ == "__main__":
-    # Replace this URL with your actual Slack incoming webhook URL
     webhook_url = os.getenv("SLACK_WEBHOOK_URL")
     
     try:
-        generate_posting_schedule(webhook_url)
+        generate_weekly_backlog_graphics(webhook_url)
     except Exception as e:
         print(f"An error occurred: {e}")
 
